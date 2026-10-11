@@ -12,3 +12,7 @@ The product model includes a unique slug, SEO title/description, image alt text,
 Characteristics are normalized as `AttributeDefinition` (specific to a category) and `ProductAttributeValue`. The definition controls its display name, possible choices and whether it is filterable. The legacy `specifications` JSON field is retained only to avoid losing old content; new data must be entered through the Characteristics inline in Django Admin.
 
 Order creation is transactional: the database locks each product row, checks available stock, creates an immutable price/name snapshot and decrements stock in the same transaction. The storefront sends an `Idempotency-Key`; repeating the same request returns the same order without decrementing stock again.
+
+## Demo media policy
+
+Demo products are intentionally model-specific. The seed command only attaches a gallery URL when its source corresponds to the named model; generic stock photos are not permitted as a fallback. Current URLs are temporary external supplier/retailer references for local visual prototyping. Before public launch, upload licensed original/brand-authorized assets through Django Admin and remove the external URLs.
