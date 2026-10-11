@@ -1,12 +1,13 @@
 # Public API contract
 
-Base URL: `/api/v1/`
+Base URL: `/api/v1`.
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| GET | `/categories/` | Active categories |
-| GET | `/products/?category=&q=&featured=true` | Published product catalogue |
-| GET | `/products/{slug}/` | Product page data |
-| POST | `/orders/` | Create an order from `{ customer_name, phone, email?, comment?, payment_method: "cod"|"bank", items: [{ slug, quantity }] }` |
+- `GET /health/` — unauthenticated readiness check.
+- `GET /categories/` — active categories with active, admin-managed `subcategories` and their available brands.
+- `GET /products/?category=&subcategory=&brand=&attr_<attribute-slug>=&q=` — published products. `brand` may be repeated. Product data includes ordered `images` and normalized `attributes`.
+- `GET /products/<slug>/` — product detail.
+- `POST /orders/` — creates an order. Required: `customer_name`, Ukrainian `phone`, and 1–20 `items` (`slug`, `quantity`). Optional: email, comment, payment method.
 
-The order endpoint validates availability and captures the product name and price at time of purchase. Payment is intentionally external to this first version.
+`POST /orders/` accepts an optional UUID `Idempotency-Key` header. A retry with the same key returns the original order (`200`) rather than creating another one. A newly accepted request returns `201`.
+
+Public endpoints expose only products in `published` status. Admin-only catalogue maintenance happens through Django Admin, never through the public API.

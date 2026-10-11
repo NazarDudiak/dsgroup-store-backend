@@ -7,4 +7,8 @@ The system follows the MoneyMind split that is relevant for a web-only store: a 
 - **Next.js App Router**: server-rendered catalogue and product pages, metadata and sitemap for search engines.
 - **REST contract**: browser does not access the database. The public API exposes only published products.
 
-The product model includes a unique slug, SEO title/description, image alt text, stock, structured specifications and a publication status. This keeps the catalogue manageable without introducing a heavyweight commerce platform.
+The product model includes a unique slug, SEO title/description, image alt text, stock and a publication status. Categories and subcategories are separate admin-managed entities: a product belongs to one category and can belong to one managed subcategory. This keeps menu navigation, URLs and filters consistent rather than relying on a free-text label.
+
+Characteristics are normalized as `AttributeDefinition` (specific to a category) and `ProductAttributeValue`. The definition controls its display name, possible choices and whether it is filterable. The legacy `specifications` JSON field is retained only to avoid losing old content; new data must be entered through the Characteristics inline in Django Admin.
+
+Order creation is transactional: the database locks each product row, checks available stock, creates an immutable price/name snapshot and decrements stock in the same transaction. The storefront sends an `Idempotency-Key`; repeating the same request returns the same order without decrementing stock again.

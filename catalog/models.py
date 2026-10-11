@@ -23,6 +23,22 @@ class Category(SEOFields):
         if not self.slug: self.slug = slugify(self.name)
         super().save(*args, **kwargs)
 
+class Subcategory(SEOFields):
+    """A navigable catalogue level managed in the admin, not a free-text tag."""
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='subcategories')
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    class Meta:
+        ordering = ['sort_order', 'name']
+        constraints = [models.UniqueConstraint(fields=['category', 'slug'], name='unique_subcategory_per_category')]
+    def __str__(self): return f'{self.category.name}: {self.name}'
+    def save(self, *args, **kwargs):
+        if not self.slug: self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
 class Brand(models.Model):
     name = models.CharField(max_length=80, unique=True)
     slug = models.SlugField(unique=True)
@@ -48,6 +64,7 @@ class Product(SEOFields):
     class Status(models.TextChoices): DRAFT = 'draft', 'Draft'; PUBLISHED = 'published', 'Published'
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='products')
     subcategory = models.SlugField(max_length=80, blank=True, db_index=True, help_text='For example: powerbanks or over-ear-headphones.')
+    subcategory_ref = models.ForeignKey(Subcategory, on_delete=models.PROTECT, related_name='products', null=True, blank=True, verbose_name='subcategory')
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='products', null=True, blank=True)
     name = models.CharField(max_length=180)
     slug = models.SlugField(unique=True, max_length=200)
@@ -90,6 +107,7 @@ class Order(models.Model):
     class Status(models.TextChoices): NEW = 'new', 'New'; CONFIRMED = 'confirmed', 'Confirmed'; SHIPPED = 'shipped', 'Shipped'; CANCELLED = 'cancelled', 'Cancelled'
     class PaymentMethod(models.TextChoices): COD = 'cod', 'Payment on delivery'; BANK = 'bank', 'Bank transfer'
     number = models.CharField(max_length=16, unique=True, editable=False)
+    request_token = models.UUIDField(unique=True, null=True, blank=True, editable=False)
     customer_name = models.CharField(max_length=120)
     phone = models.CharField(max_length=32)
     email = models.EmailField(blank=True)

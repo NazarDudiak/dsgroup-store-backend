@@ -1,6 +1,6 @@
 from django.contrib import admin
 from unfold.admin import ModelAdmin, TabularInline
-from .models import Category, Brand, AttributeDefinition, Product, ProductImage, ProductAttributeValue, Order, OrderItem
+from .models import Category, Subcategory, Brand, AttributeDefinition, Product, ProductImage, ProductAttributeValue, Order, OrderItem
 
 class ProductImageInline(TabularInline):
     model = ProductImage
@@ -23,16 +23,24 @@ class CategoryAdmin(ModelAdmin):
     prepopulated_fields = {'slug': ('name',)}
     search_fields = ('name',)
 
+@admin.register(Subcategory)
+class SubcategoryAdmin(ModelAdmin):
+    list_display = ('name', 'category', 'is_active', 'sort_order')
+    list_filter = ('category', 'is_active')
+    list_editable = ('is_active', 'sort_order')
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ('name',)
+
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
-    list_display = ('name', 'brand', 'sku', 'category', 'subcategory', 'price', 'stock', 'status', 'is_featured', 'updated_at')
-    list_filter = ('status', 'category', 'subcategory', 'brand', 'is_featured')
+    list_display = ('name', 'brand', 'sku', 'category', 'subcategory_ref', 'price', 'stock', 'status', 'is_featured', 'updated_at')
+    list_filter = ('status', 'category', 'subcategory_ref', 'brand', 'is_featured')
     list_editable = ('price', 'stock', 'status', 'is_featured')
     list_select_related = ('category',)
     search_fields = ('name', 'sku')
     prepopulated_fields = {'slug': ('name',)}
     inlines = (ProductImageInline, ProductAttributeValueInline)
-    fieldsets = (('Product', {'fields': ('category', 'subcategory', 'brand', 'name', 'slug', 'sku', 'short_description', 'description')}), ('Sales', {'fields': ('price', 'old_price', 'stock', 'status', 'is_featured')}), ('SEO', {'fields': ('seo_title', 'seo_description')}), ('Details', {'fields': ('specifications',)}))
+    fieldsets = (('Product', {'fields': ('category', 'subcategory_ref', 'subcategory', 'brand', 'name', 'slug', 'sku', 'short_description', 'description')}), ('Sales', {'fields': ('price', 'old_price', 'stock', 'status', 'is_featured')}), ('SEO', {'fields': ('seo_title', 'seo_description')}), ('Legacy data', {'fields': ('specifications',), 'description': 'Use the “Characteristics” inline below for all new data. This JSON field is retained only to preserve existing records.'}))
 
 @admin.register(Brand)
 class BrandAdmin(ModelAdmin):
@@ -58,5 +66,5 @@ class OrderAdmin(ModelAdmin):
     list_display = ('number', 'customer_name', 'phone', 'total', 'payment_method', 'status', 'created_at')
     list_filter = ('status', 'payment_method', 'created_at')
     search_fields = ('number', 'customer_name', 'phone')
-    readonly_fields = ('number', 'total', 'created_at')
+    readonly_fields = ('number', 'request_token', 'total', 'created_at')
     inlines = (OrderItemInline,)

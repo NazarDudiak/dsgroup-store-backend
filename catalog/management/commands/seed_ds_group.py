@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from catalog.models import AttributeDefinition, Brand, Category, Product, ProductAttributeValue, ProductImage
+from catalog.models import AttributeDefinition, Brand, Category, Product, ProductAttributeValue, ProductImage, Subcategory
 
 
 IMAGES = {
@@ -31,6 +31,12 @@ SUBCATEGORIES = {
     'BASEUS-GAN5-65W': 'wall-chargers', 'HOCO-X88-C': 'usb-cables', 'PROOVE-RAPID-20W': 'wall-chargers', 'BASEUS-CAFULE-C': 'usb-cables',
 }
 
+SUBCATEGORY_DETAILS = {
+    'energy': [('powerbanks', 'Павербанки'), ('charging-stations', 'Зарядні станції'), ('solar-chargers', 'Сонячні зарядні пристрої'), ('ups', 'Джерела безперебійного живлення')],
+    'audio': [('wireless-headphones', 'Бездротові навушники'), ('over-ear-headphones', 'Повнорозмірні навушники'), ('portable-speakers', 'Портативна акустика')],
+    'charging': [('wall-chargers', 'Мережеві зарядні пристрої'), ('usb-cables', 'Кабелі USB та USB-C'), ('wireless-chargers', 'Бездротові зарядні пристрої'), ('car-chargers', 'Автомобільні зарядки')],
+}
+
 
 class Command(BaseCommand):
     help = 'Create a DSGroup demo catalogue with temporary external product images.'
@@ -43,6 +49,13 @@ class Command(BaseCommand):
             ('Кабелі та зарядки', 'charging', 'Адаптери, кабелі й зарядні пристрої для щоденного використання.'),
         ]:
             categories[slug], _ = Category.objects.update_or_create(slug=slug, defaults={'name': name, 'description': description, 'is_active': True})
+        subcategories = {}
+        for category_slug, rows in SUBCATEGORY_DETAILS.items():
+            for position, (slug, name) in enumerate(rows):
+                subcategories[slug], _ = Subcategory.objects.update_or_create(
+                    category=categories[category_slug], slug=slug,
+                    defaults={'name': name, 'is_active': True, 'sort_order': position},
+                )
         products = [
             ('energy', 'Baseus Airpow 20W 20 000 mAh', 'BASEUS-AIRPOW-20K', 'Потужний павербанк для смартфона та планшета.', 1599, 1899, 'power', {'Ємність': '20 000 mAh', 'Потужність': '20W PD', 'Порти': 'USB-C, 2×USB-A'}),
             ('energy', 'Proove Hyper Flux Plus 10 000 mAh', 'PROOVE-HYPER-10K', 'Швидка зарядка 22.5W у компактному корпусі.', 1199, None, 'power', {'Ємність': '10 000 mAh', 'Потужність': '22.5W', 'Порти': 'USB-C, USB-A'}),
@@ -60,7 +73,8 @@ class Command(BaseCommand):
         for index, (category, name, sku, short, price, old_price, image_set, specs) in enumerate(products):
             brand_name = name.split()[0]
             brand, _ = Brand.objects.get_or_create(name=brand_name, defaults={'slug': brand_name.lower()})
-            product, _ = Product.objects.update_or_create(sku=sku, defaults={'category': categories[category], 'subcategory': SUBCATEGORIES.get(sku, ''), 'brand': brand, 'name': name, 'slug': sku.lower(), 'short_description': short, 'description': f'{short} Перевірене рішення для щоденного використання та резерву під час відключень електроенергії.', 'price': price, 'old_price': old_price, 'stock': 12 + index, 'status': Product.Status.PUBLISHED, 'is_featured': index < 8, 'specifications': specs, 'seo_title': f'{name} — купити в DSGroup', 'seo_description': short})
+            subcategory_slug = SUBCATEGORIES.get(sku, '')
+            product, _ = Product.objects.update_or_create(sku=sku, defaults={'category': categories[category], 'subcategory': subcategory_slug, 'subcategory_ref': subcategories.get(subcategory_slug), 'brand': brand, 'name': name, 'slug': sku.lower(), 'short_description': short, 'description': f'{short} Перевірене рішення для щоденного використання та резерву під час відключень електроенергії.', 'price': price, 'old_price': old_price, 'stock': 12 + index, 'status': Product.Status.PUBLISHED, 'is_featured': index < 8, 'specifications': specs, 'seo_title': f'{name} — купити в DSGroup', 'seo_description': short})
             ProductAttributeValue.objects.filter(product=product).delete()
             for position, (label, value) in enumerate(specs.items()):
                 definition, _ = AttributeDefinition.objects.get_or_create(category=categories[category], slug=label.lower().replace(' ', '-'), defaults={'name': label, 'is_filterable': True, 'sort_order': position})
